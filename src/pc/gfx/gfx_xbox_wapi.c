@@ -87,13 +87,13 @@ static bool gfx_xbox_wapi_start_frame(void) {
 
     if (lastPacedVblank == 0) {
         targetVblank = currentVblank + 2;
-    } else if ((DWORD)(currentVblank - lastPacedVblank) >= 2) {
+    } else if ((DWORD) (currentVblank - lastPacedVblank) >= 2) {
         targetVblank = currentVblank;
     } else {
         targetVblank = lastPacedVblank + 2;
     }
 
-    while ((int32_t)(pb_get_vbl_counter() - targetVblank) < 0) {
+    while ((int32_t) (pb_get_vbl_counter() - targetVblank) < 0) {
         pb_wait_for_vbl();
 #ifdef ENABLE_RUMBLE
         rumble_scheduler_tick();

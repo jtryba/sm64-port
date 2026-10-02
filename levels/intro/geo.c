@@ -4,6 +4,7 @@
 
 #include "game/level_geo.h"
 #include "game/geo_misc.h"
+#include "game/mario_misc.h"
 #include "game/camera.h"
 #include "game/moving_texture.h"
 #include "game/screen_transition.h"
@@ -62,6 +63,10 @@ const GeoLayout intro_geo_00035C[] = {
             GEO_ASM(2, geo_draw_mario_head_goddard),
          GEO_CLOSE_NODE(),
       GEO_CLOSE_NODE(),
+      GEO_ZBUFFER(0),
+      GEO_OPEN_NODE(),
+         GEO_ASM(2, geo_draw_goddard_widescreen_cursor),
+      GEO_CLOSE_NODE(),
    GEO_CLOSE_NODE(),
    GEO_END(),
 };
@@ -83,6 +88,10 @@ const GeoLayout intro_geo_0003B8[] = {
          GEO_OPEN_NODE(),
             GEO_ASM(3, geo_draw_mario_head_goddard),
          GEO_CLOSE_NODE(),
+      GEO_CLOSE_NODE(),
+      GEO_ZBUFFER(0),
+      GEO_OPEN_NODE(),
+         GEO_ASM(3, geo_draw_goddard_widescreen_cursor),
       GEO_CLOSE_NODE(),
    GEO_CLOSE_NODE(),
    GEO_END(),

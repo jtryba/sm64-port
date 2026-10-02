@@ -1,6 +1,5 @@
 #ifdef TARGET_XBOX
 
-#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -42,7 +41,6 @@
 #define VTX_MAX_FLOATS 32
 #define VTX_STRIDE (VTX_MAX_FLOATS * sizeof(float))
 
-#define TEXCACHE_SIZE (512 * 64 * 32 * 4)
 #define VTXBUF_FLOATS (MAX_VERTS * VTX_MAX_FLOATS)
 
 extern int win_width;
@@ -129,9 +127,40 @@ static uint32_t num_shaders;
 static struct Texture tex_pool[MAX_TEXTURES];
 static uint32_t num_textures;
 
-static uint8_t *tex_cache = NULL;
-static uint8_t *tex_cache_ptr = NULL;
-static uint8_t *tex_cache_end = NULL;
+/*
+ * Each logical texture owns its contiguous backing allocation. Texture.size
+ * is the allocation capacity; uploads reuse it until a larger block is needed.
+ */
+static uint32_t texture_alloc_live_bytes;
+
+static void texture_alloc_fail_overlap(uint32_t texture_id) {
+    debugPrint("Physical texture allocator overlap invariant failed for texture %u\n",
+               texture_id);
+    pb_show_debug_screen();
+    while (1) Sleep(100);
+}
+
+static void texture_alloc_verify_no_overlap(uint32_t texture_id) {
+    const struct Texture *tex = &tex_pool[texture_id];
+    if (tex->data == NULL || tex->size == 0) {
+        return;
+    }
+
+    const uint32_t a0 = tex->addr;
+    const uint32_t a1 = a0 + tex->size;
+
+    for (uint32_t i = 0; i < num_textures; ++i) {
+        if (i == texture_id || tex_pool[i].data == NULL || tex_pool[i].size == 0) {
+            continue;
+        }
+
+        const uint32_t b0 = tex_pool[i].addr;
+        const uint32_t b1 = b0 + tex_pool[i].size;
+        if (a0 < b1 && b0 < a1) {
+            texture_alloc_fail_overlap(texture_id);
+        }
+    }
+}
 
 static float *vtx_buf;
 static float *vtx_buf_ptr;
@@ -486,6 +515,7 @@ static uint32_t gfx_xbox_rapi_new_texture(void) {
     rst.last_tex = tex_pool + idx;
     rst.last_tex->data = NULL;
     rst.last_tex->addr = 0;
+    rst.last_tex->size = 0;
     rst.last_tex->wrap_u = XGU_WRAP;
     rst.last_tex->wrap_v = XGU_WRAP;
     rst.last_tex->filter = NV_TEX_FILTER_LINEAR;
@@ -520,18 +550,46 @@ static void gfx_xbox_rapi_upload_texture(const uint8_t *rgba32_buf, int width, i
     rst.last_tex->format = XGU_TEXTURE_FORMAT_A8B8G8R8_SWIZZLED;
 
     const uint32_t in_size = height * rst.last_tex->pitch;
+    const uint32_t texture_id = (uint32_t)(rst.last_tex - tex_pool);
+    const uint32_t old_capacity = rst.last_tex->size;
 
-    if (tex_cache_ptr + in_size > tex_cache_end) {
-        debugPrint("gfx_xbox_rapi_upload_texture(%p, %d, %d): out of cache space!\n", rgba32_buf, width, height);
-        tex_cache_ptr = tex_cache; // whatever, just continue from start
+    /*
+     * Keep one allocation per Texture object and treat Texture.size as its
+     * capacity. Shrinking or same-size uploads reuse the owned block.
+     * Growing allocates a new block first, then synchronizes before freeing
+     * the old block so no queued GPU draw can still reference freed storage.
+     */
+    if (rst.last_tex->data == NULL || old_capacity < in_size) {
+        uint8_t *new_data = (uint8_t *)MmAllocateContiguousMemoryEx(
+            in_size, 0, 0x03FFAFFF, 0, PAGE_WRITECOMBINE | PAGE_READWRITE);
+
+        if (new_data == NULL) {
+            debugPrint("Unable to allocate %u bytes for texture %u\n",
+                       in_size, texture_id);
+            pb_show_debug_screen();
+            while (1) Sleep(100);
+        }
+
+        if (rst.last_tex->data != NULL) {
+            draw_finish();
+            MmFreeContiguousMemory(rst.last_tex->data);
+            if (texture_alloc_live_bytes < old_capacity) {
+                debugPrint("Physical texture live-byte underflow\n");
+                pb_show_debug_screen();
+                while (1) Sleep(100);
+            }
+            texture_alloc_live_bytes -= old_capacity;
+        }
+
+        rst.last_tex->data = new_data;
+        rst.last_tex->addr = (uint32_t)new_data & 0x03ffffff;
+        rst.last_tex->size = in_size;
+
+        texture_alloc_live_bytes += in_size;
+        texture_alloc_verify_no_overlap(texture_id);
     }
 
-    rst.last_tex->data = tex_cache_ptr;
-    rst.last_tex->addr = (uint32_t)tex_cache_ptr & 0x03ffffff;
-
-    swizzle_rect(rgba32_buf, width, height, tex_cache_ptr, rst.last_tex->pitch, 4);
-
-    tex_cache_ptr += in_size;
+    swizzle_rect(rgba32_buf, width, height, rst.last_tex->data, rst.last_tex->pitch, 4);
 }
 
 static inline uint32_t cm_to_nv(const uint32_t val) {
@@ -625,16 +683,6 @@ static void gfx_xbox_rapi_init(void) {
 
     vtx_buf_ptr = vtx_buf;
     vtx_buf_end = vtx_buf + VTXBUF_FLOATS;
-
-    tex_cache = (uint8_t *)MmAllocateContiguousMemoryEx(TEXCACHE_SIZE, 0, 0x03FFAFFF, 0, PAGE_WRITECOMBINE | PAGE_READWRITE);
-    if (!tex_cache) {
-        debugPrint("gfx_xbox_rapi_init: unable to alloc %u bytes for texture cache\n", TEXCACHE_SIZE);
-        pb_show_debug_screen();
-        while (1) Sleep(100);
-    }
-
-    tex_cache_ptr = tex_cache;
-    tex_cache_end = tex_cache + TEXCACHE_SIZE;
 
     uint32_t *cmd = pb_begin();
     cmd = xgu_set_transform_execution_mode(cmd, XGU_PROGRAM, XGU_RANGE_MODE_PRIVATE);

@@ -13,6 +13,7 @@
 #include "controller_api.h"
 
 #define STICK_DEADZONE 8000
+#define STICK_FULL_SCALE 0x4000
 #define BUTTON_DEADZONE 0x20
 
 /*
@@ -126,6 +127,31 @@ static void controller_xbox_update_device(void) {
     }
 
     SDL_GameControllerUpdate();
+}
+
+static void controller_xbox_set_left_stick(
+    OSContPad *pad,
+    int16_t lx,
+    int16_t ly
+) {
+    const float lx_float = (float)lx;
+    const float ly_float = (float)ly;
+    const float magnitude = sqrtf(lx_float * lx_float + ly_float * ly_float);
+
+    if (magnitude > STICK_DEADZONE) {
+        float scale = 1.0f;
+
+        if (magnitude < STICK_FULL_SCALE) {
+            const float scaled_magnitude =
+                (magnitude - STICK_DEADZONE) * STICK_FULL_SCALE /
+                (STICK_FULL_SCALE - STICK_DEADZONE);
+
+            scale = scaled_magnitude / magnitude;
+        }
+
+        pad->stick_x = (s8)(lx_float * scale / 0x100);
+        pad->stick_y = (s8)(ly_float * scale / 0x100);
+    }
 }
 
 static void controller_xbox_init(void) {
@@ -296,23 +322,7 @@ static void controller_xbox_read(
         pad->button |= U_CBUTTONS;
     }
 
-    const uint32_t magnitude_sq =
-        (uint32_t)(lx * lx) +
-        (uint32_t)(ly * ly);
-
-    if (
-        magnitude_sq >
-        (uint32_t)(
-            STICK_DEADZONE *
-            STICK_DEADZONE
-        )
-    ) {
-        pad->stick_x =
-            lx / 0x100;
-
-        pad->stick_y =
-            ly / 0x100;
-    }
+    controller_xbox_set_left_stick(pad, lx, ly);
 }
 
 struct ControllerAPI controller_xbox = {

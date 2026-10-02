@@ -14,6 +14,7 @@
 
 #define STICK_DEADZONE 8000
 #define STICK_FULL_SCALE 0x4000
+#define C_STICK_DEADZONE 0x4000
 #define BUTTON_DEADZONE 0x20
 
 /*
@@ -313,20 +314,39 @@ static void controller_xbox_read(
             SDL_CONTROLLER_AXIS_RIGHTY
         );
 
-    if (rx < -0x4000) {
-        pad->button |= L_CBUTTONS;
-    }
+    /*
+     * Treat the right stick like the N64's four discrete C buttons. Use a
+     * circular center dead zone, then select only the dominant axis so an
+     * ordinary diagonal position cannot press two adjacent buttons.
+     */
+    const uint32_t rx_abs =
+        (rx < 0) ? (uint32_t)(-(int32_t)rx) : (uint32_t)rx;
 
-    if (rx > 0x4000) {
-        pad->button |= R_CBUTTONS;
-    }
+    const uint32_t ry_abs =
+        (ry < 0) ? (uint32_t)(-(int32_t)ry) : (uint32_t)ry;
 
-    if (ry < -0x4000) {
-        pad->button |= D_CBUTTONS;
-    }
+    const uint32_t c_stick_magnitude_sq =
+        rx_abs * rx_abs +
+        ry_abs * ry_abs;
 
-    if (ry > 0x4000) {
-        pad->button |= U_CBUTTONS;
+    if (
+        c_stick_magnitude_sq >
+            (uint32_t)C_STICK_DEADZONE *
+            (uint32_t)C_STICK_DEADZONE
+    ) {
+        if (rx_abs >= ry_abs) {
+            if (rx < 0) {
+                pad->button |= L_CBUTTONS;
+            } else {
+                pad->button |= R_CBUTTONS;
+            }
+        } else {
+            if (ry < 0) {
+                pad->button |= D_CBUTTONS;
+            } else {
+                pad->button |= U_CBUTTONS;
+            }
+        }
     }
 
     controller_xbox_set_left_stick(pad, lx, ly);

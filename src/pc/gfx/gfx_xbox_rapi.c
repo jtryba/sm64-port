@@ -222,9 +222,15 @@ static inline uint32_t *draw_set_texture(uint32_t *cmd, const uint32_t i, const 
         cmd = xgu_set_texture_address(cmd, i, tex->wrap_u, false, tex->wrap_v, false, XGU_CLAMP_TO_EDGE, false, false);
         cmd = xgu_set_texture_filter(cmd, i, 0, XGU_TEXTURE_CONVOLUTION_QUINCUNX, tex->filter, tex->filter, false, false, false, false);
     } else {
-        // FIXME: disabling the texture makes this die on real hardware
-        //        maybe wait until the current drawcall finishes before doing that?
-        // cmd = draw_set_texture_control0(cmd, i, false, false, 0, 0);
+        /*
+         * Real hardware cannot safely disable the texture unit here, but an
+         * earlier texture-edge draw can leave NV_TEX_ALPHAKILL set. An
+         * untextured shader must not inherit that kill state.
+         *
+         * Keep the unit enabled to preserve the existing hardware workaround,
+         * while explicitly clearing alpha-kill.
+         */
+        cmd = draw_set_texture_control0(cmd, i, true, false, 0, 0);
     }
     return cmd;
 }

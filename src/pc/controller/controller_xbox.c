@@ -31,6 +31,7 @@
 static SDL_GameController *sXboxController = NULL;
 static SDL_JoystickID sXboxControllerInstance = -1;
 static bool sXboxControllerInitialized = false;
+static bool sXboxControllerEverConnected = false;
 
 static inline bool xbox_button_pressed(
     SDL_GameController *pad,
@@ -102,6 +103,8 @@ static void controller_xbox_open_first(void) {
             SDL_JoystickInstanceID(
                 joystick
             );
+
+        sXboxControllerEverConnected = true;
 
         return;
     }
@@ -185,6 +188,10 @@ static void controller_xbox_read(
         sXboxController;
 
     if (xpad == NULL) {
+        if (sXboxControllerEverConnected) {
+            pad->errnum = CONT_NO_RESPONSE_ERROR;
+        }
+
         return;
     }
 

@@ -154,6 +154,13 @@ static void audio_callback(UNUSED void *dev, UNUSED void *arg) {
 
 
 static bool audio_xbox_init(void) {
+    qhead = NULL;
+    qtail = NULL;
+    qpool = NULL;
+    queued = 0;
+    audio_buffer_cur = 0;
+    memset(audio_buffer, 0, sizeof(audio_buffer));
+
     XAudioInit(16, 2, audio_callback, NULL);
 
     // this double-buffers

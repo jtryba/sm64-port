@@ -570,6 +570,9 @@ static void gfx_xbox_rapi_upload_texture(const uint8_t *rgba32_buf, int width, i
             while (1) Sleep(100);
         }
 
+        memset(new_data, 0, in_size);
+        __asm__ __volatile__("sfence");
+
         if (rst.last_tex->data != NULL) {
             draw_finish();
             MmFreeContiguousMemory(rst.last_tex->data);
@@ -674,6 +677,15 @@ static void gfx_xbox_rapi_draw_triangles(float buf_vbo[], size_t buf_vbo_len, si
 }
 
 static void gfx_xbox_rapi_init(void) {
+    memset(&rst, 0, sizeof(rst));
+    memset(shader_program_pool, 0, sizeof(shader_program_pool));
+    memset(tex_pool, 0, sizeof(tex_pool));
+    num_shaders = 0;
+    num_textures = 0;
+    texture_alloc_live_bytes = 0;
+    vtx_buf_half = 0;
+    vtx_start = 0;
+
     vtx_buf = (float *)MmAllocateContiguousMemoryEx(VTXBUF_FLOATS * 4 * 2, 0, 0x03FFAFFF, 0, PAGE_WRITECOMBINE | PAGE_READWRITE);
     if (!vtx_buf) {
         debugPrint("gfx_xbox_rapi_init: unable to alloc %u bytes for vertex buffer\n", VTXBUF_FLOATS * 4 * 2);
@@ -681,6 +693,8 @@ static void gfx_xbox_rapi_init(void) {
         while (1) Sleep(100);
     }
 
+    memset(vtx_buf, 0, VTXBUF_FLOATS * 4 * 2);
+    __asm__ __volatile__("sfence");
     vtx_buf_ptr = vtx_buf;
     vtx_buf_end = vtx_buf + VTXBUF_FLOATS;
 

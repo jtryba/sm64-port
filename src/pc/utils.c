@@ -118,4 +118,3 @@ const char *get_save_filename(void) {
     if (!path[0]) snprintf(path, sizeof(path), "%s%s", get_user_path(), SAVE_FILE);
     return path;
 }
-

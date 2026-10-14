@@ -38,7 +38,7 @@ static void xbox_write_metadata_file(const char *path, const char *key, const ch
 
     fwrite(bom, 1, sizeof(bom), fp);
     for (i = 0; line[i] != '\0'; i++) {
-        const unsigned char utf16le[2] = { (unsigned char)line[i], 0x00 };
+        const unsigned char utf16le[2] = { (unsigned char) line[i], 0x00 };
         fwrite(utf16le, 1, sizeof(utf16le), fp);
     }
 

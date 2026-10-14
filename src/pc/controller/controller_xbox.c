@@ -24,38 +24,23 @@
  *
  *   value > 0x20
  */
-#define TRIGGER_AXIS_DEADZONE \
-    ((BUTTON_DEADZONE * SDL_JOYSTICK_AXIS_MAX) / 0xFF)
+#define TRIGGER_AXIS_DEADZONE ((BUTTON_DEADZONE * SDL_JOYSTICK_AXIS_MAX) / 0xFF)
 
 static SDL_GameController *sXboxController = NULL;
 static SDL_JoystickID sXboxControllerInstance = -1;
 static bool sXboxControllerInitialized = false;
 
-static inline bool xbox_button_pressed(
-    SDL_GameController *pad,
-    SDL_GameControllerButton button
-) {
-    return SDL_GameControllerGetButton(
-        pad,
-        button
-    ) != 0;
+static inline bool xbox_button_pressed(SDL_GameController *pad, SDL_GameControllerButton button) {
+    return SDL_GameControllerGetButton(pad, button) != 0;
 }
 
-static inline bool xbox_trigger_pressed(
-    SDL_GameController *pad,
-    SDL_GameControllerAxis axis
-) {
-    return SDL_GameControllerGetAxis(
-        pad,
-        axis
-    ) > TRIGGER_AXIS_DEADZONE;
+static inline bool xbox_trigger_pressed(SDL_GameController *pad, SDL_GameControllerAxis axis) {
+    return SDL_GameControllerGetAxis(pad, axis) > TRIGGER_AXIS_DEADZONE;
 }
 
 static void controller_xbox_close_current(void) {
     if (sXboxController != NULL) {
-        SDL_GameControllerClose(
-            sXboxController
-        );
+        SDL_GameControllerClose(sXboxController);
 
         sXboxController = NULL;
     }
@@ -75,32 +60,23 @@ static void controller_xbox_open_first(void) {
             continue;
         }
 
-        SDL_GameController *controller =
-            SDL_GameControllerOpen(i);
+        SDL_GameController *controller = SDL_GameControllerOpen(i);
 
         if (controller == NULL) {
             continue;
         }
 
-        SDL_Joystick *joystick =
-            SDL_GameControllerGetJoystick(
-                controller
-            );
+        SDL_Joystick *joystick = SDL_GameControllerGetJoystick(controller);
 
         if (joystick == NULL) {
-            SDL_GameControllerClose(
-                controller
-            );
+            SDL_GameControllerClose(controller);
 
             continue;
         }
 
         sXboxController = controller;
 
-        sXboxControllerInstance =
-            SDL_JoystickInstanceID(
-                joystick
-            );
+        sXboxControllerInstance = SDL_JoystickInstanceID(joystick);
 
         return;
     }
@@ -110,13 +86,8 @@ static void controller_xbox_update_device(void) {
     SDL_Event event;
 
     while (SDL_PollEvent(&event)) {
-        if (
-            event.type ==
-                SDL_CONTROLLERDEVICEREMOVED &&
-            sXboxController != NULL &&
-            event.cdevice.which ==
-                sXboxControllerInstance
-        ) {
+        if (event.type == SDL_CONTROLLERDEVICEREMOVED && sXboxController != NULL
+            && event.cdevice.which == sXboxControllerInstance) {
             controller_xbox_close_current();
         }
     }
@@ -129,71 +100,43 @@ static void controller_xbox_update_device(void) {
 }
 
 static void controller_xbox_init(void) {
-    if (
-        SDL_Init(
-            SDL_INIT_GAMECONTROLLER
-        ) != 0
-    ) {
+    if (SDL_Init(SDL_INIT_GAMECONTROLLER) != 0) {
         return;
     }
 
-    SDL_GameControllerEventState(
-        SDL_ENABLE
-    );
+    SDL_GameControllerEventState(SDL_ENABLE);
 
     sXboxControllerInitialized = true;
 
     controller_xbox_open_first();
 }
 
-static void controller_xbox_read(
-    OSContPad *pad
-) {
+static void controller_xbox_read(OSContPad *pad) {
     if (!sXboxControllerInitialized) {
         return;
     }
 
     controller_xbox_update_device();
 
-    SDL_GameController *xpad =
-        sXboxController;
+    SDL_GameController *xpad = sXboxController;
 
     if (xpad == NULL) {
         return;
     }
 
-    const bool xpad_black =
-        xbox_button_pressed(
-            xpad,
-            SDL_CONTROLLER_BUTTON_RIGHTSHOULDER
-        );
+    const bool xpad_black = xbox_button_pressed(xpad, SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
 
-    const bool xpad_ltrig =
-        xbox_trigger_pressed(
-            xpad,
-            SDL_CONTROLLER_AXIS_TRIGGERLEFT
-        );
+    const bool xpad_ltrig = xbox_trigger_pressed(xpad, SDL_CONTROLLER_AXIS_TRIGGERLEFT);
 
-    const bool xpad_rtrig =
-        xbox_trigger_pressed(
-            xpad,
-            SDL_CONTROLLER_AXIS_TRIGGERRIGHT
-        );
+    const bool xpad_rtrig = xbox_trigger_pressed(xpad, SDL_CONTROLLER_AXIS_TRIGGERRIGHT);
 
     /*
      * Preserve the original dashboard reboot:
      *
      * Back + Black + left trigger + right trigger
      */
-    if (
-        xbox_button_pressed(
-            xpad,
-            SDL_CONTROLLER_BUTTON_BACK
-        ) &&
-        xpad_black &&
-        xpad_ltrig &&
-        xpad_rtrig
-    ) {
+    if (xbox_button_pressed(xpad, SDL_CONTROLLER_BUTTON_BACK) && xpad_black && xpad_ltrig
+        && xpad_rtrig) {
         XReboot();
     }
 
@@ -201,37 +144,19 @@ static void controller_xbox_read(
      * Preserve Baseline-B mappings.
      */
 
-    if (
-        xbox_button_pressed(
-            xpad,
-            SDL_CONTROLLER_BUTTON_A
-        )
-    ) {
+    if (xbox_button_pressed(xpad, SDL_CONTROLLER_BUTTON_A)) {
         pad->button |= A_BUTTON;
     }
 
-    if (
-        xbox_button_pressed(
-            xpad,
-            SDL_CONTROLLER_BUTTON_X
-        )
-    ) {
+    if (xbox_button_pressed(xpad, SDL_CONTROLLER_BUTTON_X)) {
         pad->button |= B_BUTTON;
     }
 
-    if (
-        xbox_button_pressed(
-            xpad,
-            SDL_CONTROLLER_BUTTON_LEFTSHOULDER
-        )
-    ) {
+    if (xbox_button_pressed(xpad, SDL_CONTROLLER_BUTTON_LEFTSHOULDER)) {
         pad->button |= L_TRIG;
     }
 
-    if (
-        xpad_black ||
-        xpad_rtrig
-    ) {
+    if (xpad_black || xpad_rtrig) {
         pad->button |= R_TRIG;
     }
 
@@ -239,12 +164,7 @@ static void controller_xbox_read(
         pad->button |= Z_TRIG;
     }
 
-    if (
-        xbox_button_pressed(
-            xpad,
-            SDL_CONTROLLER_BUTTON_START
-        )
-    ) {
+    if (xbox_button_pressed(xpad, SDL_CONTROLLER_BUTTON_START)) {
         pad->button |= START_BUTTON;
     }
 
@@ -256,29 +176,13 @@ static void controller_xbox_read(
      * behavior sees the same values as Baseline B.
      */
 
-    const int16_t lx =
-        SDL_GameControllerGetAxis(
-            xpad,
-            SDL_CONTROLLER_AXIS_LEFTX
-        );
+    const int16_t lx = SDL_GameControllerGetAxis(xpad, SDL_CONTROLLER_AXIS_LEFTX);
 
-    const int16_t ly =
-        (int16_t)~SDL_GameControllerGetAxis(
-            xpad,
-            SDL_CONTROLLER_AXIS_LEFTY
-        );
+    const int16_t ly = (int16_t) ~SDL_GameControllerGetAxis(xpad, SDL_CONTROLLER_AXIS_LEFTY);
 
-    const int16_t rx =
-        SDL_GameControllerGetAxis(
-            xpad,
-            SDL_CONTROLLER_AXIS_RIGHTX
-        );
+    const int16_t rx = SDL_GameControllerGetAxis(xpad, SDL_CONTROLLER_AXIS_RIGHTX);
 
-    const int16_t ry =
-        (int16_t)~SDL_GameControllerGetAxis(
-            xpad,
-            SDL_CONTROLLER_AXIS_RIGHTY
-        );
+    const int16_t ry = (int16_t) ~SDL_GameControllerGetAxis(xpad, SDL_CONTROLLER_AXIS_RIGHTY);
 
     if (rx < -0x4000) {
         pad->button |= L_CBUTTONS;
@@ -296,22 +200,12 @@ static void controller_xbox_read(
         pad->button |= U_CBUTTONS;
     }
 
-    const uint32_t magnitude_sq =
-        (uint32_t)(lx * lx) +
-        (uint32_t)(ly * ly);
+    const uint32_t magnitude_sq = (uint32_t) (lx * lx) + (uint32_t) (ly * ly);
 
-    if (
-        magnitude_sq >
-        (uint32_t)(
-            STICK_DEADZONE *
-            STICK_DEADZONE
-        )
-    ) {
-        pad->stick_x =
-            lx / 0x100;
+    if (magnitude_sq > (uint32_t) (STICK_DEADZONE * STICK_DEADZONE)) {
+        pad->stick_x = lx / 0x100;
 
-        pad->stick_y =
-            ly / 0x100;
+        pad->stick_y = ly / 0x100;
     }
 }
 

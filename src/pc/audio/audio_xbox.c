@@ -144,7 +144,7 @@ static void audio_callback(UNUSED void *dev, UNUSED void *arg) {
      * unchanged.
      */
     if (rx < sizeof(inbuf)) {
-        memset((uint8_t *)inbuf + rx, 0, sizeof(inbuf) - rx);
+        memset((uint8_t *) inbuf + rx, 0, sizeof(inbuf) - rx);
     }
 
     convert_block(audio_buffer[audio_buffer_cur], inbuf);

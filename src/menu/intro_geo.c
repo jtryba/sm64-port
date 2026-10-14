@@ -176,7 +176,6 @@ static Gfx *intro_backdrop_one_image_at(f32 x, f32 y, s8 backgroundType) {
     return displayList;
 }
 
-
 Gfx *intro_backdrop_one_image(s32 index, s8 *backgroundTable) {
     return intro_backdrop_one_image_at(introBackgroundOffsetX[index], introBackgroundOffsetY[index],
                                        backgroundTable[index]);
@@ -254,7 +253,8 @@ Gfx *geo_intro_backdrop(s32 sp48, struct GraphNode *sp4c, UNUSED void *context) 
 #ifdef WIDESCREEN
         leftColumns = intro_backdrop_left_extra_columns();
         rightColumns = intro_backdrop_right_extra_columns();
-        displayList = alloc_display_list((16 + (leftColumns + rightColumns) * 3) * sizeof(*displayList));
+        displayList =
+            alloc_display_list((16 + (leftColumns + rightColumns) * 3) * sizeof(*displayList));
 #else
         displayList = alloc_display_list(16 * sizeof(*displayList));
 #endif
@@ -266,7 +266,8 @@ Gfx *geo_intro_backdrop(s32 sp48, struct GraphNode *sp4c, UNUSED void *context) 
             gSPDisplayList(displayListIter++, intro_backdrop_one_image(i, backgroundTable));
         }
 #ifdef WIDESCREEN
-        intro_backdrop_append_widescreen_sides(&displayListIter, backgroundTable, leftColumns, rightColumns);
+        intro_backdrop_append_widescreen_sides(&displayListIter, backgroundTable, leftColumns,
+                                               rightColumns);
 #endif
         gSPDisplayList(displayListIter++, &title_screen_bg_dl_0A000190);
         gSPEndDisplayList(displayListIter);
@@ -297,7 +298,8 @@ Gfx *geo_game_over_tile(s32 sp40, struct GraphNode *sp44, UNUSED void *context) 
 #ifdef WIDESCREEN
         leftColumns = intro_backdrop_left_extra_columns();
         rightColumns = intro_backdrop_right_extra_columns();
-        displayList = alloc_display_list((16 + (leftColumns + rightColumns) * 3) * sizeof(*displayList));
+        displayList =
+            alloc_display_list((16 + (leftColumns + rightColumns) * 3) * sizeof(*displayList));
 #else
         displayList = alloc_display_list(16 * sizeof(*displayList));
 #endif
@@ -325,7 +327,8 @@ Gfx *geo_game_over_tile(s32 sp40, struct GraphNode *sp44, UNUSED void *context) 
             gSPDisplayList(displayListIter++, intro_backdrop_one_image(j, gameOverBackgroundTable));
         }
 #ifdef WIDESCREEN
-        intro_backdrop_append_widescreen_sides(&displayListIter, gameOverBackgroundTable, leftColumns, rightColumns);
+        intro_backdrop_append_widescreen_sides(&displayListIter, gameOverBackgroundTable, leftColumns,
+                                               rightColumns);
 #endif
         gSPDisplayList(displayListIter++, &title_screen_bg_dl_0A000190);
         gSPEndDisplayList(displayListIter);

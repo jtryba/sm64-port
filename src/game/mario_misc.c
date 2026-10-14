@@ -109,8 +109,7 @@ Gfx *geo_draw_mario_head_goddard(s32 callContext, struct GraphNode *node, Mat4 *
  */
 Gfx *geo_draw_goddard_widescreen_cursor(s32 callContext, UNUSED struct GraphNode *node,
                                         UNUSED Mat4 *c) {
-    if (callContext == GEO_CONTEXT_RENDER
-        && gd_cursor_is_visible()
+    if (callContext == GEO_CONTEXT_RENDER && gd_cursor_is_visible()
         && gd_cursor_uses_widescreen_overlay()) {
         const s32 x = gd_get_cursor_presentation_x();
         const s32 y = gd_get_cursor_y();
@@ -132,13 +131,11 @@ Gfx *geo_draw_goddard_widescreen_cursor(s32 callContext, UNUSED struct GraphNode
         gDPSetTextureFilter(gDisplayListHead++, G_TF_BILERP);
         gDPSetTexturePersp(gDisplayListHead++, G_TP_NONE);
 
-        gDPLoadTextureBlock(gDisplayListHead++, gd_get_cursor_texture(),
-                            G_IM_FMT_RGBA, G_IM_SIZ_16b, 32, 32, 0,
-                            G_TX_WRAP | G_TX_NOMIRROR, G_TX_WRAP | G_TX_NOMIRROR,
+        gDPLoadTextureBlock(gDisplayListHead++, gd_get_cursor_texture(), G_IM_FMT_RGBA, G_IM_SIZ_16b,
+                            32, 32, 0, G_TX_WRAP | G_TX_NOMIRROR, G_TX_WRAP | G_TX_NOMIRROR,
                             G_TX_NOMASK, G_TX_NOMASK, G_TX_NOLOD, G_TX_NOLOD);
 
-        gSPTextureRectangle(gDisplayListHead++,
-                            x * 4, y * 4, (x + 32) * 4, (y + 32) * 4,
+        gSPTextureRectangle(gDisplayListHead++, x * 4, y * 4, (x + 32) * 4, (y + 32) * 4,
                             G_TX_RENDERTILE, 0, 0, 1 << 10, 1 << 10);
 
         gDPPipeSync(gDisplayListHead++);

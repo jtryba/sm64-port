@@ -134,10 +134,10 @@ static uint32_t num_textures;
 static uint32_t texture_alloc_live_bytes;
 
 static void texture_alloc_fail_overlap(uint32_t texture_id) {
-    debugPrint("Physical texture allocator overlap invariant failed for texture %u\n",
-               texture_id);
+    debugPrint("Physical texture allocator overlap invariant failed for texture %u\n", texture_id);
     pb_show_debug_screen();
-    while (1) Sleep(100);
+    while (1)
+        Sleep(100);
 }
 
 static void texture_alloc_verify_no_overlap(uint32_t texture_id) {
@@ -550,7 +550,7 @@ static void gfx_xbox_rapi_upload_texture(const uint8_t *rgba32_buf, int width, i
     rst.last_tex->format = XGU_TEXTURE_FORMAT_A8B8G8R8_SWIZZLED;
 
     const uint32_t in_size = height * rst.last_tex->pitch;
-    const uint32_t texture_id = (uint32_t)(rst.last_tex - tex_pool);
+    const uint32_t texture_id = (uint32_t) (rst.last_tex - tex_pool);
     const uint32_t old_capacity = rst.last_tex->size;
 
     /*
@@ -560,14 +560,14 @@ static void gfx_xbox_rapi_upload_texture(const uint8_t *rgba32_buf, int width, i
      * the old block so no queued GPU draw can still reference freed storage.
      */
     if (rst.last_tex->data == NULL || old_capacity < in_size) {
-        uint8_t *new_data = (uint8_t *)MmAllocateContiguousMemoryEx(
+        uint8_t *new_data = (uint8_t *) MmAllocateContiguousMemoryEx(
             in_size, 0, 0x03FFAFFF, 0, PAGE_WRITECOMBINE | PAGE_READWRITE);
 
         if (new_data == NULL) {
-            debugPrint("Unable to allocate %u bytes for texture %u\n",
-                       in_size, texture_id);
+            debugPrint("Unable to allocate %u bytes for texture %u\n", in_size, texture_id);
             pb_show_debug_screen();
-            while (1) Sleep(100);
+            while (1)
+                Sleep(100);
         }
 
         memset(new_data, 0, in_size);
@@ -579,13 +579,14 @@ static void gfx_xbox_rapi_upload_texture(const uint8_t *rgba32_buf, int width, i
             if (texture_alloc_live_bytes < old_capacity) {
                 debugPrint("Physical texture live-byte underflow\n");
                 pb_show_debug_screen();
-                while (1) Sleep(100);
+                while (1)
+                    Sleep(100);
             }
             texture_alloc_live_bytes -= old_capacity;
         }
 
         rst.last_tex->data = new_data;
-        rst.last_tex->addr = (uint32_t)new_data & 0x03ffffff;
+        rst.last_tex->addr = (uint32_t) new_data & 0x03ffffff;
         rst.last_tex->size = in_size;
 
         texture_alloc_live_bytes += in_size;

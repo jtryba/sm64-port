@@ -27,7 +27,8 @@ static void gfx_xbox_wapi_init(const char *game_name, bool start_in_fullscreen) 
     status = XVideoSetMode(1280, 720, 32, REFRESH_DEFAULT);
 
     // fall back to 640x480
-    if (!status) XVideoSetMode(640, 480, 32, REFRESH_DEFAULT);
+    if (!status)
+        XVideoSetMode(640, 480, 32, REFRESH_DEFAULT);
 
     if ((status = pb_init())) {
         debugPrint("gfx_xbox_wapi_init: pb_init failed: %d\n", status);
@@ -41,7 +42,8 @@ static void gfx_xbox_wapi_init(const char *game_name, bool start_in_fullscreen) 
     pb_target_back_buffer();
     pb_erase_depth_stencil_buffer(0, 0, win_width, win_height);
     pb_fill(0, 0, win_width, win_height, 0x00000000);
-    while (pb_busy());
+    while (pb_busy())
+        ;
 
     pb_show_front_screen();
 

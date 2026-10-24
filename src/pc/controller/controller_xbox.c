@@ -13,6 +13,8 @@
 #include "controller_api.h"
 
 #define STICK_DEADZONE 8000
+#define STICK_FULL_SCALE 0x4000
+#define C_STICK_DEADZONE 0x4000
 #define BUTTON_DEADZONE 0x20
 
 /*
@@ -29,6 +31,7 @@
 static SDL_GameController *sXboxController = NULL;
 static SDL_JoystickID sXboxControllerInstance = -1;
 static bool sXboxControllerInitialized = false;
+static bool sXboxControllerEverConnected = false;
 
 static inline bool xbox_button_pressed(SDL_GameController *pad, SDL_GameControllerButton button) {
     return SDL_GameControllerGetButton(pad, button) != 0;
@@ -78,6 +81,8 @@ static void controller_xbox_open_first(void) {
 
         sXboxControllerInstance = SDL_JoystickInstanceID(joystick);
 
+        sXboxControllerEverConnected = true;
+
         return;
     }
 }
@@ -97,6 +102,26 @@ static void controller_xbox_update_device(void) {
     }
 
     SDL_GameControllerUpdate();
+}
+
+static void controller_xbox_set_left_stick(OSContPad *pad, int16_t lx, int16_t ly) {
+    const float lx_float = (float) lx;
+    const float ly_float = (float) ly;
+    const float magnitude = sqrtf(lx_float * lx_float + ly_float * ly_float);
+
+    if (magnitude > STICK_DEADZONE) {
+        float scale = 1.0f;
+
+        if (magnitude < STICK_FULL_SCALE) {
+            const float scaled_magnitude =
+                (magnitude - STICK_DEADZONE) * STICK_FULL_SCALE / (STICK_FULL_SCALE - STICK_DEADZONE);
+
+            scale = scaled_magnitude / magnitude;
+        }
+
+        pad->stick_x = (s8) (lx_float * scale / 0x100);
+        pad->stick_y = (s8) (ly_float * scale / 0x100);
+    }
 }
 
 static void controller_xbox_init(void) {
@@ -121,6 +146,10 @@ static void controller_xbox_read(OSContPad *pad) {
     SDL_GameController *xpad = sXboxController;
 
     if (xpad == NULL) {
+        if (sXboxControllerEverConnected) {
+            pad->errnum = CONT_NO_RESPONSE_ERROR;
+        }
+
         return;
     }
 
@@ -184,29 +213,34 @@ static void controller_xbox_read(OSContPad *pad) {
 
     const int16_t ry = (int16_t) ~SDL_GameControllerGetAxis(xpad, SDL_CONTROLLER_AXIS_RIGHTY);
 
-    if (rx < -0x4000) {
-        pad->button |= L_CBUTTONS;
+    /*
+     * Treat the right stick like the N64's four discrete C buttons. Use a
+     * circular center dead zone, then select only the dominant axis so an
+     * ordinary diagonal position cannot press two adjacent buttons.
+     */
+    const uint32_t rx_abs = (rx < 0) ? (uint32_t) (-(int32_t) rx) : (uint32_t) rx;
+
+    const uint32_t ry_abs = (ry < 0) ? (uint32_t) (-(int32_t) ry) : (uint32_t) ry;
+
+    const uint32_t c_stick_magnitude_sq = rx_abs * rx_abs + ry_abs * ry_abs;
+
+    if (c_stick_magnitude_sq > (uint32_t) C_STICK_DEADZONE * (uint32_t) C_STICK_DEADZONE) {
+        if (rx_abs >= ry_abs) {
+            if (rx < 0) {
+                pad->button |= L_CBUTTONS;
+            } else {
+                pad->button |= R_CBUTTONS;
+            }
+        } else {
+            if (ry < 0) {
+                pad->button |= D_CBUTTONS;
+            } else {
+                pad->button |= U_CBUTTONS;
+            }
+        }
     }
 
-    if (rx > 0x4000) {
-        pad->button |= R_CBUTTONS;
-    }
-
-    if (ry < -0x4000) {
-        pad->button |= D_CBUTTONS;
-    }
-
-    if (ry > 0x4000) {
-        pad->button |= U_CBUTTONS;
-    }
-
-    const uint32_t magnitude_sq = (uint32_t) (lx * lx) + (uint32_t) (ly * ly);
-
-    if (magnitude_sq > (uint32_t) (STICK_DEADZONE * STICK_DEADZONE)) {
-        pad->stick_x = lx / 0x100;
-
-        pad->stick_y = ly / 0x100;
-    }
+    controller_xbox_set_left_stick(pad, lx, ly);
 }
 
 struct ControllerAPI controller_xbox = {

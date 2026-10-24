@@ -1,6 +1,6 @@
 [submodule "xbox/nxdk"]
 	path = xbox/nxdk
-	url = https://github.com/jtryba/sm64-enhanced-vanilla-nxdk-dry-run-20261017.git
+	url = https://git.jtryba.com/public/nxdk.git
 [submodule "xbox/xgu"]
 	path = xbox/xgu
 	url = https://github.com/dracc/xgu.git
